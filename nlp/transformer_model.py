@@ -167,22 +167,29 @@ def train_model(model, dataloader, optimizer, criterion, device):
         total_loss += loss.item()
     return total_loss / len(dataloader)
 
+
 def evaluate_model(model, dataloader, criterion, device):
     model.eval()
     total_loss = 0.
-    correct = 0
-    total = 0
+    all_preds = []
+    all_labels = []
+
     with torch.no_grad():
         for token_ids, labels in dataloader:
             token_ids, labels = token_ids.to(device), labels.to(device)
             logits = model(token_ids)
             loss = criterion(logits, labels)
             total_loss += loss.item()
+
             preds = logits.argmax(dim=1)
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
-    accuracy = correct / total
-    return total_loss / len(dataloader), accuracy
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
+    # Compute metrics
+    accuracy = (sum(1 for x, y in zip(all_preds, all_labels) if x == y)) / len(all_labels)
+    precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='macro', zero_division=0)
+
+    return total_loss / len(dataloader), accuracy, precision, recall, f1
 
 
 # ## Test Model
@@ -247,12 +254,12 @@ if __name__ == '__main__':
     # Training loop
     for epoch in range(num_epochs):
         start_time = time.time()  # Start timer for the epoch
-    
-        print("starting train")
+
+        print("Starting train")
         train_loss = train_model(model, train_loader, optimizer, criterion, device)
-        val_loss, val_acc = evaluate_model(model, val_loader, criterion, device)
-        val_precision, val_recall, val_f1
+        val_loss, val_acc, val_precision, val_recall, val_f1 = evaluate_model(model, val_loader, criterion, device)
+
         epoch_time = time.time() - start_time  # Compute elapsed time for the epoch
-        print(f"Epoch {epoch+1}: Train Loss = {train_loss:.4f}, Val Loss = {val_loss:.4f}, Val Acc = {val_acc:.4f} ({epoch_time}s)")
-
-
+        print(f"Epoch {epoch + 1}: Train Loss = {train_loss:.4f}, Val Loss = {val_loss:.4f}, "
+              f"Val Acc = {val_acc:.4f}, Precision = {val_precision:.4f}, "
+              f"Recall = {val_recall:.4f}, F1 = {val_f1:.4f} ({epoch_time}s)")
