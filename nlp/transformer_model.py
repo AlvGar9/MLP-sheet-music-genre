@@ -251,11 +251,27 @@ if __name__ == '__main__':
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss()
 
+    # early stopping vars
+    best_val_loss = float("inf")
+    best_model_state = None
+    epochs_no_improve = 0
+
     # Training loop
     for epoch in range(num_epochs):
         start_time = time.time()  # Start timer for the epoch
 
-        print("Starting train")
+        # Early stopping check CONDITION AND SKIP THE LOOP
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            best_model_state = model.state_dict()
+            epochs_no_improve = 0
+        else:
+            epochs_no_improve += 1
+
+        if epochs_no_improve >= patience:
+            print(f"Early stopping at epoch {epoch + 1} for LR={lr}.")
+            break
+
         train_loss = train_model(model, train_loader, optimizer, criterion, device)
         val_loss, val_acc, val_precision, val_recall, val_f1 = evaluate_model(model, val_loader, criterion, device)
 
