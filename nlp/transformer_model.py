@@ -260,6 +260,9 @@ if __name__ == '__main__':
     for epoch in range(num_epochs):
         start_time = time.time()  # Start timer for the epoch
 
+        train_loss = train_model(model, train_loader, optimizer, criterion, device)
+        val_loss, val_acc, val_precision, val_recall, val_f1 = evaluate_model(model, val_loader, criterion, device)
+
         # Early stopping check CONDITION AND SKIP THE LOOP
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -271,9 +274,7 @@ if __name__ == '__main__':
         if epochs_no_improve >= patience:
             print(f"Early stopping at epoch {epoch + 1} for LR={lr}.")
             break
-
-        train_loss = train_model(model, train_loader, optimizer, criterion, device)
-        val_loss, val_acc, val_precision, val_recall, val_f1 = evaluate_model(model, val_loader, criterion, device)
+            
 
         epoch_time = time.time() - start_time  # Compute elapsed time for the epoch
         print(f"Epoch {epoch + 1}: Train Loss = {train_loss:.4f}, Val Loss = {val_loss:.4f}, "
