@@ -20,6 +20,7 @@ import time
 import json 
 
 #from mxl_tokenizer import MusicXML_to_tokens
+from sklearn.metrics import precision_recall_fscore_support
 
 
 # ## Data Loader
@@ -125,10 +126,18 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerClassifier(nn.Module):
-    def __init__(self, vocab_size, d_model=256, nhead=8, num_layers=6, num_classes=10, max_len=512, dropout=0.3):
+    def __init__(self, vocab_size, d_model=256, nhead=8, num_layers=6, num_classes=10, max_len=512, dropout=0.3, measure_len=32, structure_vocab_size=None):
         super(TransformerClassifier, self).__init__()
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.pos_encoder = PositionalEncoding(d_model, max_len)
+
+        # structual encoding
+        self.measure_len = measure_len
+        if structure_vocab_size is None:
+            structure_vocab_size = (max_len // measure_len) + 1
+
+        self.structure_embedding = nn.Embedding(structure_vocab_size, d_model)
+
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward=512, dropout=dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers)
         self.dropout = nn.Dropout(dropout)
@@ -138,12 +147,27 @@ class TransformerClassifier(nn.Module):
     def forward(self, src):
         # src shape: (batch_size, seq_len)
         embedded = self.embedding(src)  # (batch_size, seq_len, d_model)
-        embedded = self.pos_encoder(embedded)
-        # PyTorch transformer expects shape: (seq_len, batch_size, d_model)
-        embedded = embedded.transpose(0, 1)
-        transformer_output = self.transformer_encoder(embedded)  # (seq_len, batch_size, d_model)
-        # Take the output corresponding to the <CLS> token (first token)
-        cls_output = transformer_output[0]  # (batch_size, d_model)
+
+        batch_size, seq_len = src.shape
+        # Create structural (hierarchical) indices based on token position.
+        # For example, every `measure_length` tokens belong to the same measure.
+        positions = torch.arange(seq_len, device=src.device)
+        measure_indices = positions // self.measure_length
+        measure_indices = measure_indices.unsqueeze(0).expand(batch_size, seq_len)
+        # Get the measure-level embedding.
+        structure_embedded = self.structure_embedding(measure_indices)
+
+        # Combine token embeddings with structure embeddings.
+        combined_embedding = embedded + structure_embedded
+
+        # Add positional encoding.
+        combined_embedding = self.pos_encoder(combined_embedding)
+
+        # PyTorch transformer expects (seq_len, batch_size, d_model)
+        combined_embedding = combined_embedding.transpose(0, 1)
+        transformer_output = self.transformer_encoder(combined_embedding)
+        # Use the output corresponding to the <CLS> token (first token).
+        cls_output = transformer_output[0]
         cls_output = self.dropout(cls_output)
         logits = self.fc(cls_output)
         return logits
@@ -255,6 +279,7 @@ if __name__ == '__main__':
     best_val_loss = float("inf")
     best_model_state = None
     epochs_no_improve = 0
+    patience = 10
 
     # Training loop
     for epoch in range(num_epochs):
