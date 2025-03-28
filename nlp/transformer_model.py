@@ -30,11 +30,9 @@ from sklearn.metrics import precision_recall_fscore_support
 
 class MusicXMLDataset(Dataset):
     def __init__(self, json_path, vocab=None, max_len=512):
-        # Load the preprocessed entries from the JSON file.
         with open(json_path, 'r', encoding='utf-8') as f:
             self.entries = json.load(f)
         
-        # Optionally filter entries (e.g., only those from a specific directory)
         self.entries = [entry for entry in self.entries if "/mxl/" in entry['mxl']]
         print("total entries:", len(self.entries))
         
@@ -44,7 +42,6 @@ class MusicXMLDataset(Dataset):
         self.genre_to_idx = {genre: idx for idx, genre in enumerate(sorted(unique_genres))}
         
         self.max_len = max_len
-        # Build vocabulary from the cached tokens if not provided.
         if vocab is None:
             self.vocab = self.build_vocab()
         else:
@@ -52,9 +49,7 @@ class MusicXMLDataset(Dataset):
 
     def build_vocab(self):
         counter = Counter()
-        # Build vocabulary using the precomputed tokens field.
         for entry in self.entries:
-            # Parse the tokens from the JSON string stored in the "tokens" field.
             tokens = json.loads(entry['tokens'])
             counter.update(tokens)
         # Start with special tokens.
@@ -71,13 +66,9 @@ class MusicXMLDataset(Dataset):
 
     def __getitem__(self, idx):
         entry = self.entries[idx]
-        # Load the cached tokens from the "tokens" field.
         tokens = json.loads(entry['tokens'])
-        # Prepend a <CLS> token for classification.
         tokens = ['<CLS>'] + tokens
-        # Convert tokens to token IDs using the vocabulary.
         token_ids = [self.vocab.get(tok, self.vocab['<UNK>']) for tok in tokens]
-        # Truncate or pad the sequence to max_len.
         if len(token_ids) > self.max_len:
             token_ids = token_ids[:self.max_len]
         else:
@@ -140,7 +131,7 @@ class TransformerClassifier(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward=512, dropout=dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers)
         self.dropout = nn.Dropout(dropout)
-        # Classifier head: you can use the <CLS> token embedding or a pooling over sequence outputs
+
         self.fc = nn.Linear(d_model, num_classes)
 
     def forward(self, src):
@@ -148,18 +139,16 @@ class TransformerClassifier(nn.Module):
         embedded = self.embedding(src)  # (batch_size, seq_len, d_model)
 
         batch_size, seq_len = src.shape
-        # Create structural (hierarchical) indices based on token position.
-        # For example, every `measure_length` tokens belong to the same measure.
+        
         positions = torch.arange(seq_len, device=src.device)
         measure_indices = positions // self.measure_len
         measure_indices = measure_indices.unsqueeze(0).expand(batch_size, seq_len)
-        # Get the measure-level embedding.
         structure_embedded = self.structure_embedding(measure_indices)
 
-        # Combine token embeddings with structure embeddings.
+        # combine token & structure embedding
         combined_embedding = embedded + structure_embedded
 
-        # Add positional encoding.
+        # add positional encoding
         combined_embedding = self.pos_encoder(combined_embedding)
 
         # PyTorch transformer expects (seq_len, batch_size, d_model)
@@ -245,7 +234,7 @@ if __name__ == '__main__':
     json_path = 'preprocessed_dataset.json'
     max_len = 512
     batch_size = 32
-    num_classes = 9  # Adjust according to your dataset
+    num_classes = 9
     d_model = 256
     nhead = 4
     num_layers = 3
@@ -282,7 +271,7 @@ if __name__ == '__main__':
 
     # Training loop
     for epoch in range(num_epochs):
-        start_time = time.time()  # Start timer for the epoch
+        start_time = time.time()
 
         train_loss = train_model(model, train_loader, optimizer, criterion, device)
         val_loss, val_acc, val_precision, val_recall, val_f1 = evaluate_model(model, val_loader, criterion, device)
@@ -300,7 +289,7 @@ if __name__ == '__main__':
             break
             
 
-        epoch_time = time.time() - start_time  # Compute elapsed time for the epoch
+        epoch_time = time.time() - start_time
         print(f"Epoch {epoch + 1}: Train Loss = {train_loss:.4f}, Val Loss = {val_loss:.4f}, "
               f"Val Acc = {val_acc:.4f}, Precision = {val_precision:.4f}, "
               f"Recall = {val_recall:.4f}, F1 = {val_f1:.4f} ({epoch_time}s)")

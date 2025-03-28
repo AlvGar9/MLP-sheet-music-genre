@@ -366,15 +366,12 @@ def get_chord_tokens(s):
 
 
 def load_MusicXML(file_path): 
-    # Check if file is .mxl (compressed MusicXML)
     if file_path.endswith('.mxl'):
         # Use music21 to parse MXL
         score = converter.parse(file_path)
         
-        # Convert back to MusicXML and read the file contents
         temp_file_path = score.write(fmt='musicxml')
 
-        # Read the contents of the generated MusicXML file
         with open(temp_file_path, "r", encoding="utf-8") as f:
             raw_data = f.read()
 
@@ -382,17 +379,14 @@ def load_MusicXML(file_path):
         with open(file_path, "rb") as f:
             raw_data = f.read()
 
-        # Try detecting encoding
         encoding_detected = chardet.detect(raw_data)['encoding']
         
-        # Open file with detected encoding
         with open(file_path, encoding=encoding_detected) as f:
             raw_data = f.read()
 
     # Parse the MusicXML data with BeautifulSoup
     soup = BeautifulSoup(raw_data, 'lxml-xml')
 
-    # Eliminate line breaks
     for tag in soup(string='\n'):
         tag.extract()
 
@@ -418,7 +412,6 @@ def MusicXML_to_tokens(mxml_path, bar_major=True, note_name=True, tokenize_chord
     #     print(f"This function only supports 1 or 2 parts. The input file has {len(parts)} parts.")
     # assert len(parts) in (1, 2)
     
-    # Optionally, tokenize chord symbols from the full score.
     if tokenize_chord_symbols:
         chords = get_chord_tokens(converter.parse(mxml_path))
     else:
@@ -426,11 +419,9 @@ def MusicXML_to_tokens(mxml_path, bar_major=True, note_name=True, tokenize_chord
         
     tokens = []
     if bar_major:
-        # Assume all parts have the same number of measures.
         num_measures = len(parts[0])
         for measure_idx in range(num_measures):
             measure_tokens = ['bar']
-            # Optionally, insert chord tokens for this measure if available.
             if tokenize_chord_symbols and chords is not None:
                 # If chords is organized per measure, insert tokens here.
                 if measure_idx < len(chords):
@@ -448,7 +439,6 @@ def MusicXML_to_tokens(mxml_path, bar_major=True, note_name=True, tokenize_chord
             part_marker = f"P{part_idx + 1}"
             tokens.append(part_marker)
             tokens += measures_to_tokens(part, soup, staff=None, note_name=note_name)
-        # Optionally, add chord tokens at the beginning if available.
         if tokenize_chord_symbols and chords is not None:
             tokens = ['C'] + sum([['bar'] + c for c in chords], []) + tokens
 
