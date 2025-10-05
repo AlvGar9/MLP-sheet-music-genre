@@ -19,13 +19,13 @@
 <h2>📌 Project Overview</h2>
 
 <p>
-  This project tackles the challenge of music genre classification by applying machine learning models to two distinct data modalities. The primary goal is to demonstrate a versatile skill set in handling, processing, and modeling different types of data—symbolic and visual—to solve a single, cohesive problem.
+  This project tackles the challenge of music genre classification by applying machine learning models to two distinct data modalities. The primary goal is to demonstrate a versatile skill set in handling, processing, and modeling different types of data, symbolic and visual, to solve a single, cohesive problem.
 </p>
 <p>
   The "why" behind this project is to showcase an end-to-end data science workflow, from rigorous exploratory data analysis (EDA) and preprocessing of a complex, imbalanced dataset to the implementation and evaluation of state-of-the-art deep learning models. It serves as a practical demonstration of my ability to approach a problem from multiple angles and leverage the appropriate tools for each task.
 </p>
 
-<h3>🎵 Part 1: NLP Approach — Classification from Symbolic Music Data (MXL)</h3>
+<h3>🎵 Part 1: NLP Approach, Classification from Symbolic Music Data (MXL)</h3>
 <p>
   This component treats music as a language. By parsing the symbolic notation in MusicXML (<code>.mxl</code>) files, we can apply powerful NLP models to learn and classify genres.
 </p>
@@ -46,7 +46,7 @@
     </li>
 </ul>
 
-<h3>🖼️ Part 2: Computer Vision Approach — Classification from Sheet Music Images</h3>
+<h3>🖼️ Part 2: Computer Vision Approach, Classification from Sheet Music Images</h3>
 <p>
   This component treats music as a visual medium. Sheet music pages, derived from PDF files, are converted into images and fed into Convolutional Neural Networks (CNNs) to visually classify the genre.
 </p>
